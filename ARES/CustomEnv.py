@@ -29,21 +29,6 @@ class CustomEnv(Env):
         
 
 
-
-
-
-
-
-        done, trunc = False, False
-        if(action == 0):
-            self.mat, merged = logic.move_up(self.mat)
-        elif(action == 1):
-            self.mat, merged = logic.move_down(self.mat)
-        elif(action == 2):
-            self.mat, merged = logic.move_left(self.mat)
-        elif(action == 3):
-            self.mat, merged = logic.move_right(self.mat)
-
         status = logic.get_current_state(self.mat)
         if(status == 'GAME NOT OVER'):
             logic.add_new_2(self.mat)
