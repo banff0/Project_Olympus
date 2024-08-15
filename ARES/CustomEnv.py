@@ -1,66 +1,94 @@
 import numpy as np
 from gymnasium import spaces, Env
 from gymnasium.envs.registration import register
+import matplotlib.pyplot as plt
+import pyautogui
 
 import HadesController
 
-class CustomEnv(Env):
+pyautogui.FAILSAFE = False
+
+class Hades(Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, timelimit=750, screen_size=[960, 1080]):
-        super(CustomEnv, self).__init__()
-        self.action_space = spaces.Dict({"motion": spaces.Discrete(5), "attack": spaces.Discrete(4), "dash":spaces.Discrete(2), "cursor_velocity": spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float16)})
-        self.observation_space = spaces.Tuple((spaces.Discrete(3), spaces.Box(low=0, high=255, shape=screen_size, dtype=np.int8)))
+    def __init__(self, timelimit=75000, screen_size=None):
+        super(Hades, self).__init__()
+        if not screen_size:
+            w, h = list(pyautogui.size())
+            self.screen_size = [h, w, 3]
+        else:
+            self.screen_size = screen_size
+        print(self.screen_size)
+
+        self.action_space = spaces.MultiDiscrete([ 5, 4, 2, 200, 200 ])
+        # self.action_space = spaces.Dict({"motion": spaces.Discrete(5), "attack": spaces.Discrete(4), "dash":spaces.Discrete(2), "cursor_velocity": spaces.Box(low=-100, high=100, shape=(2,), dtype=np.float16)})
+        # self.observation_space = spaces.Tuple((spaces.Discrete(3), spaces.Box(low=0, high=255, shape=self.screen_size, dtype=np.uint8)))
+        self.observation_space = spaces.Box(low=0, high=255, shape=self.screen_size, dtype=np.uint8)
         self.timestep = 0
         self.timelimit = timelimit
         self.human_render = False
         self.returns = []
-        self.rewards = [0]
+        self.episode_rewards = [0]
+
+        self.screen_handler = HadesController.ScreenHandler()
 
     def step(self, action):
         done, trunc = False, False
 
-        HadesController.move(direction = action["motion"])
-        HadesController.attack(action = action["attack"])
-        print(action["cursor_velocity"])
-        HadesController.move_cursor(action["cursor_velocity"][0], action["cursor_velocity"][1])
-        if action["dash"]:
+        HadesController.move(direction = action[0])
+        HadesController.attack(action = action[1])
+        cusror_velocity = [action[3] - 100, action[4] - 100]
+        print(cusror_velocity)
+        HadesController.move_cursor(*cusror_velocity)
+        if action[2]:
             HadesController.dash()
         
+        obs = self.screen_handler.capture_screen()
 
-
-        status = logic.get_current_state(self.mat)
-        if(status == 'GAME NOT OVER'):
-            logic.add_new_2(self.mat)
-            # zero for each move
-            # reward = 0
-        else:
+        if self.screen_handler.get_end_of_room(obs):
             done = True
-            # reward is the largest value at end of ep, or sum of all tiles
-            # reward = np.max(self.mat)
-            # reward = np.sum(self.mat)
+
         info = {"": ""}
         self.timestep += 1
 
         if self.timelimit < self.timestep:
             print(self.timelimit, self.timestep)
             trunc = True
-            # reward is the largest value at end of ep, or sum of all tiles
-            # reward = np.max(self.mat)
-            # reward = np.sum(self.mat)
 
         if self.human_render:
-            print(np.array(self.mat))
-            print()
-            time.sleep(0.25)
+            print(action)
+            print(f"Total Reward: {np.sum(self.episode_rewards)}")
         
-        # reward is the number of free tiles
-        # reward += np.count_nonzero(self.mat)
-        # the value of the merged numbers
-        reward = merged
+        # -1 reward for each timestep
+        reward = -1
 
-        self.rewards[-1] += reward
-        # return np.array(self.mat).flatten(), reward, done, trunc, info
-        obs = np.array(self.mat)
-        obs = np.expand_dims(obs, axis=0)
+        self.episode_rewards.append(reward)
         return obs, reward, done, trunc, info
+
+    def reset(self, seed=None):
+        self.returns.append(np.sum(self.episode_rewards))
+        if len(self.returns) % 50 == 0:
+            plt.figure(figsize=[16, 12])
+            plt.subplot(2, 1, 1)
+            plt.plot(range(len(self.returns)), self.episode_rewards, label="rewards")
+            plt.legend() 
+            plt.subplot(2, 1, 2)
+            plt.plot(range(len(self.returns)), self.returns, label="returns")
+            plt.legend() 
+            plt.savefig("2048_return_graph")
+            plt.close()
+        self.episode_rewards = [0]
+        
+        self.timestep = 0
+        obs = self.screen_handler.capture_screen()
+        return obs, {"": ""}  # reward, done, info can't be included
+    
+    def set_room_type(self, room_type):
+        self.screen_handler.set_room_type(room_type)
+
+    def render(self, mode='human'):
+        if mode =="human":
+            self.human_render = True
+
+    def close (self):
+        pass

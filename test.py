@@ -18,7 +18,7 @@ result = cv2.VideoWriter('filename.mp4',
                          cv2.VideoWriter_fourcc(*'mp4v'), 
                          30, [960*2, 1080]) 
 
-template = cv2.imread('coin.png')
+template = cv2.imread('boon.png')
 
 while True:
     t0 = time.time()
@@ -26,9 +26,9 @@ while True:
     screen_img = capture_screen(monitor)
     result.write(screen_img) 
 
-    res = cv2.matchTemplate(screen_img,template,cv2.TM_CCOEFF)
-    # print(f"max:{np.max(res)}")
-    if np.max(res) > 40000000:
+    res = cv2.matchTemplate(screen_img,template,cv2.TM_CCOEFF_NORMED)
+    print(f"max:{np.max(res)}")
+    if np.max(res) > 0.7:
         print("COIN!!")
 
     # Exit when 'q' is pressed
