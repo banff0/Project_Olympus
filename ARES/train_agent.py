@@ -8,9 +8,9 @@ from CustomCallback import CustomCallback
 
 TRAIN_STEPS = 5000000
 VAL_STEPS = 100000
-lr = 0.01
-gamma = 0.8
-ent_coef = 0
+lr = 0.001
+gamma = 0.999
+ent_coef = 0.009
 
 ENV = CustomEnv.Hades()
 # print(check_env(ENV))

@@ -9,36 +9,46 @@ import HadesController
 pyautogui.FAILSAFE = False
 
 class Hades(Env):
+
+
     metadata = {'render.modes': ['human']}
 
     def __init__(self, timelimit=75000, screen_size=None):
         super(Hades, self).__init__()
         if not screen_size:
             w, h = list(pyautogui.size())
-            self.screen_size = [h, w, 3]
+            w = w // 3
+            h = h // 3
+            self.screen_size = [h, w, 1]
         else:
             self.screen_size = screen_size
-        print(self.screen_size)
+        # print(self.screen_size)
 
-        self.action_space = spaces.MultiDiscrete([ 5, 4, 2, 200, 200 ])
+        self.action_space = spaces.MultiDiscrete([ 5, 3, 2, 200, 200 ])
         # self.action_space = spaces.Dict({"motion": spaces.Discrete(5), "attack": spaces.Discrete(4), "dash":spaces.Discrete(2), "cursor_velocity": spaces.Box(low=-100, high=100, shape=(2,), dtype=np.float16)})
         # self.observation_space = spaces.Tuple((spaces.Discrete(3), spaces.Box(low=0, high=255, shape=self.screen_size, dtype=np.uint8)))
         self.observation_space = spaces.Box(low=0, high=255, shape=self.screen_size, dtype=np.uint8)
+
+        #region Setup
         self.timestep = 0
         self.timelimit = timelimit
         self.human_render = False
         self.returns = []
         self.episode_rewards = [0]
+        self.episode_over = True
 
         self.screen_handler = HadesController.ScreenHandler()
+        #endregion
 
     def step(self, action):
         done, trunc = False, False
 
         HadesController.move(direction = action[0])
+        print(action)
+        # pyautogui.click()
         HadesController.attack(action = action[1])
         cusror_velocity = [action[3] - 100, action[4] - 100]
-        print(cusror_velocity)
+        # print(cusror_velocity)
         HadesController.move_cursor(*cusror_velocity)
         if action[2]:
             HadesController.dash()
@@ -47,6 +57,7 @@ class Hades(Env):
 
         if self.screen_handler.get_end_of_room(obs):
             done = True
+            self.episode_over = True
 
         info = {"": ""}
         self.timestep += 1
@@ -54,6 +65,7 @@ class Hades(Env):
         if self.timelimit < self.timestep:
             print(self.timelimit, self.timestep)
             trunc = True
+            self.episode_over = True
 
         if self.human_render:
             print(action)
@@ -85,6 +97,8 @@ class Hades(Env):
     
     def set_room_type(self, room_type):
         self.screen_handler.set_room_type(room_type)
+        self.episode_over = False
+
 
     def render(self, mode='human'):
         if mode =="human":

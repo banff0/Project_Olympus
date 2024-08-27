@@ -27,11 +27,18 @@ class CustomCallback(BaseCallback):
         # # to have access to the parent object
         # self.parent = None  # type: Optional[BaseCallback]
 
+    def get_room_from_human(self):
+        episode_over = self.model.get_env().get_attr("episode_over")[0]
+        if episode_over:
+            room_type = input("Please Enter The Next Room Type>")
+            self.model.get_env().env_method("set_room_type", room_type)
+
     def _on_training_start(self) -> None:
         """
         This method is called before the first rollout starts.
         """
-        pass
+        # print(self.model.get_env().get_attr("episode_over"))
+        self.get_room_from_human()
 
     def _on_rollout_start(self) -> None:
         """
@@ -50,8 +57,7 @@ class CustomCallback(BaseCallback):
 
         :return: (bool) If the callback returns False, training is aborted early.
         """
-        print(self.model.get_env())
-        print(self.locals)
+        self.get_room_from_human()
 
         return True
 
